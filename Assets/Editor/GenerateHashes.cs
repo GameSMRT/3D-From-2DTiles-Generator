@@ -8,26 +8,13 @@ using System.Linq;
 public class GenerateHashes : EditorWindow
 {
 
-    private string _name = "Assets/Tiles/Map Tiles";
-    private string _name2 = "Assets/Tiles/Unique Map Tiles";
-
-   // private string _Tiles = "Assets/AllTiles.asset";
-
-   // private string _UniqueTiles = "Assets/UniqueTiles.asset";
+    private string PathToMapTiles = "Assets/Tiles/Map Tiles";
+    private string PathToUniqueTiles = "Assets/Tiles/Unique Map Tiles";
     private  Texture2D myGUITexture;
-
     private FileInfo[] info;
-
-   // private ListOfHashes source;
-   // private ListOfHashes UniqueHashFile;
-
     private ListOfHashes AllTilesAsset;
-
     private ListOfHashes UnqiueTileAsset;
-
-  //  private ListOfHashes Names;
-
-    public List<string> HashList = new List<string>();
+   // public List<string> HashList = new List<string>();
 
     [MenuItem("Tools/Generate Tile Hashes")]
     public static void GenerateHashesWindow()
@@ -37,20 +24,16 @@ public class GenerateHashes : EditorWindow
 
     }
 
+
+    //UI
     void OnGUI()
     {
-        _name = EditorGUILayout.TextField("Path To Tiles", _name);
-        _name2 = EditorGUILayout.TextField("Path To Place Unique Tiles", _name2);
-        // _Tiles = EditorGUILayout.TextField("All Tiles Asset", _Tiles);
-
-        // _UniqueTiles = EditorGUILayout.TextField("Unique Tiles", _UniqueTiles);
+        PathToMapTiles = EditorGUILayout.TextField("Path To Tiles", PathToMapTiles);
+        PathToUniqueTiles = EditorGUILayout.TextField("Path To Place Unique Tiles", PathToUniqueTiles);
 
 
         AllTilesAsset = EditorGUILayout.ObjectField("All Tiles",AllTilesAsset, typeof(ListOfHashes), true) as ListOfHashes;
         UnqiueTileAsset = EditorGUILayout.ObjectField("Unique Tiles",UnqiueTileAsset, typeof(ListOfHashes), true) as ListOfHashes;
-
-
-      //  Names = EditorGUILayout.ObjectField("Names", Names, typeof(ListOfHashes), true) as ListOfHashes;
 
         if (GUILayout.Button("Proceed"))
         {
@@ -58,75 +41,55 @@ public class GenerateHashes : EditorWindow
         }
     }
 
-     private static int SortByName(string o1, string o2) {
-     return o1.CompareTo(o2);
- }
-
-
 
     void StoreHashes()
     {
-        // string path1 = 
-        // source = (ListOfHashes)AssetDatabase.LoadAssetAtPath(AssetDatabase.GetAssetPath(AllTilesAsset), typeof(ListOfHashes));
-        //UniqueHashFile = (ListOfHashes)AssetDatabase.LoadAssetAtPath(AssetDatabase.GetAssetPath(UnqiueTileAsset), typeof(ListOfHashes));
-
+        //clear the lists
         AllTilesAsset.HashList.Clear();
         UnqiueTileAsset.HashList.Clear();
-       // Names.HashList.Clear();
+        //HashList.Clear();
 
-        HashList.Clear();
-
-        DirectoryInfo dir = new DirectoryInfo(_name);
+        //get all the .png files in the provided directory
+        DirectoryInfo dir = new DirectoryInfo(PathToMapTiles);
          info = dir.GetFiles("*.png");
+
         foreach (FileInfo f in info)
         {
+            //load the texture
             string pathToFile = f.Directory + "\\" + f.Name;
             string relativepath = "Assets" + pathToFile.Substring(Application.dataPath.Length);
-              myGUITexture = (Texture2D)AssetDatabase.LoadAssetAtPath(relativepath, typeof(Texture2D));
+             myGUITexture = (Texture2D)AssetDatabase.LoadAssetAtPath(relativepath, typeof(Texture2D));
 
-            //  HashList.Add(f.Name);
-         //   Names.HashList.Add(f.Name);
-             
-
-            
-
-            //   source.HashList.add
-            // Debug.Log(relativepath);
-
+            //store the hash
             string myString = myGUITexture.imageContentsHash.ToString();
-            AllTilesAsset.HashList.Add(myString);
-            //  Debug.Log(myGUITexture.imageContentsHash);
-            // Debug.Log(f.Directory + "\\" + f.Name);
-
-          
+            AllTilesAsset.HashList.Add(myString);          
         }
-        //  Names.HashList = HashList.OrderBy(go => go).ToList();
-       // Names.HashList.Sort();
         UniqueTileStore();
 
     }
 
     void UniqueTileStore()
-    {
-        
-
-       
-
-        
+    {   
+        //loop though all the hashes we just saved
         for (int i = 0; i < AllTilesAsset.HashList.Count; i++)
         {
+
+            //if the hash is not contained in the unique tile list
             if (!UnqiueTileAsset.HashList.Contains(AllTilesAsset.HashList[i]))
             {
-                UnqiueTileAsset.HashList.Add(AllTilesAsset.HashList[i]);
-                // UniqueHashFile.HashList.Add();
 
+                //add it to the list
+                UnqiueTileAsset.HashList.Add(AllTilesAsset.HashList[i]);
+
+
+                //get the image at this index and copy it to the unique tiles folder
                 string pathToFile = info[i].Directory.ToString();
                 string relativepath = "Assets" + pathToFile.Substring(Application.dataPath.Length);
 
                 string oldfile = relativepath + "/" + info[i].Name;
-                string newfile = _name2 + "/" + info[i].Name;
+                string newfile = PathToUniqueTiles + "/" + info[i].Name;
 
-                // FileUtil.CopyFileOrDirectory(oldfile, _name2);
+            
                 File.Copy(oldfile, newfile, true);
             }
             else
@@ -134,10 +97,10 @@ public class GenerateHashes : EditorWindow
                 //    Debug.Log("Delete" + info[i].Name);
             }
         }
+
+        //refresh the asset database and mark the files dirty so Unity saves them.
         AssetDatabase.Refresh();
         EditorUtility.SetDirty(AllTilesAsset);
         EditorUtility.SetDirty(UnqiueTileAsset);
-        // info = null;
-
     }
 }

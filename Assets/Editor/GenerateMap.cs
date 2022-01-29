@@ -16,11 +16,11 @@ public class GenerateMap : EditorWindow
     private ListOfHashes AllTilesAsset;
 
     private ListOfHashes UnqiueTileAsset;
-    private FileInfo[] info;
-    private FileInfo[] info2;
-    private FileInfo[] info3;
+    private FileInfo[] AllMaterialFiles;
+    private FileInfo[] AllFBXModels;
+    private FileInfo[] AllUniquePNGfiles;
 
-    //private string pathToMapTiles = "Assets/Tiles/Map Tiles";
+
     private string pathToUniqueTiles = "Assets/Tiles/Unique Map Tiles";
     private string pathToTileMaterials = "Assets/Meshes/Tile Materials";
     private string pathTo3DTiles = "Assets/Meshes/3D Tiles";
@@ -34,7 +34,7 @@ public class GenerateMap : EditorWindow
     int UniqueTileIndex;
     GameObject MapParent;
     GameObject Parent2d;
-        GameObject Parent3d;
+    GameObject Parent3d;
 
     bool Spawn2d = true;
     bool spawn3d = true;
@@ -51,36 +51,20 @@ public class GenerateMap : EditorWindow
 
     }
 
-   /* private void DisplayShaderContext(Rect r)
-    {
-        if (mc == null)
-            mc = new MenuCommand(this, 0);
-        // Create dummy material to make it not highlight any shaders inside:
-        string tmpStr = "Shader \"Hidden/tmp_shdr\"{SubShader{Pass{}}}";
-        Material temp = new Material(tmpStr);
 
-        // Rebuild shader menu:
-        UnityEditorInternal.InternalEditorUtility.SetupShaderMenu(temp);
-        // Destroy temporary shader and material:
-        DestroyImmediate(temp.shader, true);
-        DestroyImmediate(temp, true);
-        // Display shader popup:
-        EditorUtility.DisplayPopupMenu(r, "CONTEXT/ShaderPopup", mc);
-    }*/
-
+    //UI
     void OnGUI()
     {
 
         PlaneMesh = EditorGUILayout.ObjectField("2D Plane Mesh", PlaneMesh, typeof(GameObject), true) as GameObject;
 
-       
+
 
         WidthOfPlane = EditorGUILayout.FloatField("Width Of 2D Plane Mesh:", WidthOfPlane);
 
         NumberOfColumns = EditorGUILayout.IntField("Number Of Columns:", NumberOfColumns);
-       NumberOfRows = EditorGUILayout.IntField("Number Of Rows:", NumberOfRows);
+        NumberOfRows = EditorGUILayout.IntField("Number Of Rows:", NumberOfRows);
 
-        // pathToMapTiles = EditorGUILayout.TextField("Path To Tiles", pathToMapTiles);
         pathToUniqueTiles = EditorGUILayout.TextField("Path To Unique Tiles", pathToUniqueTiles);
         pathToTileMaterials = EditorGUILayout.TextField("Path To Place Generated Materials", pathToTileMaterials);
 
@@ -107,86 +91,91 @@ public class GenerateMap : EditorWindow
         }
 
 
-       
+
     }
-
-    /*void Generate3D()
-    {
-  
-
-
-    }*/
 
 
     void GenreatePlanes()
     {
+        //Gerneate empty parent gameobjects
         MapParent = new GameObject("Map Parent");
         Parent2d = new GameObject("2D Parent");
         Parent2d.transform.parent = MapParent.transform;
         Parent3d = new GameObject("3D Parent");
         Parent3d.transform.parent = MapParent.transform;
+
+        //reset counters
         ColumnCount = 0;
         currentRow = 0;
         RowCount = 0;
 
 
+        //Get all materials from the provided folder
         DirectoryInfo dir = new DirectoryInfo(pathToTileMaterials);
-        info = dir.GetFiles("*.mat");
+        AllMaterialFiles = dir.GetFiles("*.mat");
 
+        //get all png textures from the Unique tile folder
         DirectoryInfo dir3 = new DirectoryInfo(pathToUniqueTiles);
-        info3 = dir3.GetFiles("*.png");
+        AllUniquePNGfiles = dir3.GetFiles("*.png");
 
+        //get all FBX files from the 3D tile folder
         DirectoryInfo dir2 = new DirectoryInfo(pathTo3DTiles);
-       info2 = dir2.GetFiles("*.fbx");
-        //Debug.Log(info2.Length);
-
-        // NumberOfRows = AllTilesAsset.HashList.Count / NumberOfColumns;
+        AllFBXModels = dir2.GetFiles("*.fbx");
 
 
+        //Loop through all tiles
         for (int i = 0; i < AllTilesAsset.HashList.Count; i++)
         {
-           
+
+            //spawn a new isntance of the plane mesh
             if (Spawn2d)
             {
-               
+
                 NewMesh = PrefabUtility.InstantiatePrefab(PlaneMesh) as GameObject;
                 NewMesh.transform.rotation = Quaternion.identity;
                 NewMesh.name = PlaneMesh.name + i;
             }
 
+
+
+            //calulate where the plane should be in the loop,a nd move it into place.
             TilePosition = new Vector3(0 - (ColumnCount * WidthOfPlane), 0, 0 + (currentRow * WidthOfPlane));
             if (Spawn2d)
             {
                 NewMesh.transform.position = TilePosition; //new Vector3(NewMesh.transform.position.x - (ColumnCount * WidthOfPlane), NewMesh.transform.position.y, NewMesh.transform.position.z + (currentRow * WidthOfPlane));
                 NewMesh.transform.parent = Parent2d.transform;
             }
+
+            //Iterate the counters
             ColumnCount++;
             RowCount++;
 
-            if(RowCount == NumberOfRows)
+            //when the row count reaches the max, reset back to 0
+            if (RowCount == NumberOfRows)
             {
                 RowCount = 0;
             }
 
+            //when the collume count reaches the max, reset to 0 and iterate the current row
             if (ColumnCount == NumberOfColumns)
             {
                 currentRow++;
                 ColumnCount = 0;
             }
 
-           
-
+            //loop though all the Unique tiles and compare it to the current index to determine what Unique tile we should be using.
             for (int a = 0; a < UnqiueTileAsset.HashList.Count; a++)
             {
-                if(AllTilesAsset.HashList[i] == UnqiueTileAsset.HashList[a])
+                if (AllTilesAsset.HashList[i] == UnqiueTileAsset.HashList[a])
                 {
                     UniqueTileIndex = a;
                 }
             }
 
+            //Load the unique material we found and apply it to the spawned mesh.
             if (Spawn2d)
             {
-                string pathToFile = info[UniqueTileIndex].Directory + "\\" + info[UniqueTileIndex].Name;
+                string pathToFile = AllMaterialFiles[UniqueTileIndex].Directory + "\\" + AllMaterialFiles[UniqueTileIndex].Name;
                 string relativepath = "Assets" + pathToFile.Substring(Application.dataPath.Length);
 
                 Material m = (Material)AssetDatabase.LoadAssetAtPath(relativepath, typeof(Material));
@@ -195,24 +184,22 @@ public class GenerateMap : EditorWindow
             }
 
 
+            //Spawn 3d Meshes
             if (spawn3d)
             {
-                for (int b = 0; b < info2.Length; b++)
+                for (int b = 0; b < AllFBXModels.Length; b++)
                 {
-                    string modelname = info2[b].Name.Replace(".fbx", "");
-                    string tilename = info3[UniqueTileIndex].Name.Replace(".png", "");
-                    // tilename = info[UniqueTileIndex].Name.Replace(".mat", "");
+                    //Get the current names of 3D model and current Unique PNG name and strip out the file extentions
+                    string modelname = AllFBXModels[b].Name.Replace(".fbx", "");
+                    string tilename = AllUniquePNGfiles[UniqueTileIndex].Name.Replace(".png", "");
 
-                    //  
 
+                    //if the files have the same name
                     if (modelname == tilename)
                     {
-                        //Debug.Log(modelname + "-" + tilename);
-
-                        string pathToFile3 = info2[b].Directory + "\\" + info2[b].Name;
+                        //load the 3D file and spawn it in the same position.
+                        string pathToFile3 = AllFBXModels[b].Directory + "\\" + AllFBXModels[b].Name;
                         string relativepath3 = "Assets" + pathToFile3.Substring(Application.dataPath.Length);
-
-                      //  Debug.Log(relativepath3);
 
                         GameObject g = (GameObject)AssetDatabase.LoadAssetAtPath(relativepath3, typeof(GameObject));
 
@@ -232,27 +219,27 @@ public class GenerateMap : EditorWindow
 
     void GenerateMaterials()
     {
+        //get all the .png files inside the provided Unique tiles folder
         DirectoryInfo dir3 = new DirectoryInfo(pathToUniqueTiles);
-        info3 = dir3.GetFiles("*.png");
+        AllUniquePNGfiles = dir3.GetFiles("*.png");
 
+        //loop through the UnqiueTileAsset list
         for (int i = 0; i < UnqiueTileAsset.HashList.Count; i++)
         {
-
-            GeneratedMaterial = new Material(Shader.Find("Standard"));
-
-            //Texture2D tex = new Texture2D(2, 2);
-
-
-
-                 string pathToFile = info[i].Directory + "\\" + info[i].Name;
+            //load the texture at this index
+            string pathToFile = AllMaterialFiles[i].Directory + "\\" + AllMaterialFiles[i].Name;
             string relativepath = "Assets" + pathToFile.Substring(Application.dataPath.Length);
-
             Texture2D t = (Texture2D)AssetDatabase.LoadAssetAtPath(relativepath, typeof(Texture2D));
 
-            // tex.LoadImage(info[i] as Texture2D);
-             GeneratedMaterial.SetTexture("_MainTex", t);
-            string myName = info[i].Name;
+            //create a new mateiral, and assign the main tex to the loaded texture
+            GeneratedMaterial = new Material(Shader.Find("Standard"));
+            GeneratedMaterial.SetTexture("_MainTex", t);
+
+            //Grab the name of the texture and remove .png from it
+            string myName = AllMaterialFiles[i].Name;
             myName.Replace(".png", "");
+
+            //save the material.
             AssetDatabase.CreateAsset(GeneratedMaterial, pathToTileMaterials + "/" + myName + ".mat");
         }
 
